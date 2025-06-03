@@ -1,48 +1,152 @@
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 import Navigation from '@/components/Navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Send, Bot, User, Sparkles } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+
+interface Message {
+  id: string;
+  text: string;
+  sender: 'user' | 'bot';
+  timestamp: Date;
+}
 
 const Chat = () => {
-  const [messages, setMessages] = useState([
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+  const [messages, setMessages] = useState<Message[]>([
     {
-      id: 1,
+      id: '1',
       sender: 'bot',
       text: "Hi! I'm your eco-friendly shopping assistant 🌱 How can I help you find sustainable products today?",
-      time: '10:30 AM'
+      timestamp: new Date()
     }
   ]);
   const [inputText, setInputText] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate('/auth');
+    }
+  }, [user, loading, navigate]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  useEffect(() => {
+    if (user) {
+      initializeConversation();
+    }
+  }, [user]);
+
+  const initializeConversation = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('chat_conversations')
+        .insert([
+          {
+            user_id: user?.id,
+            title: 'New Conversation'
+          }
+        ])
+        .select()
+        .single();
+
+      if (error) throw error;
+      setConversationId(data.id);
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+    }
+  };
+
+  const saveMessage = async (message: string, senderType: 'user' | 'ai') => {
+    if (!conversationId) return;
+
+    try {
+      await supabase
+        .from('chat_messages')
+        .insert([
+          {
+            conversation_id: conversationId,
+            user_id: user?.id,
+            message,
+            sender_type: senderType
+          }
+        ]);
+    } catch (error) {
+      console.error('Error saving message:', error);
+    }
+  };
+
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputText.trim()) return;
+    if (!inputText.trim() || isTyping) return;
 
-    const newMessage = {
-      id: messages.length + 1,
+    const userMessage: Message = {
+      id: Date.now().toString(),
       sender: 'user',
       text: inputText,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      timestamp: new Date()
     };
 
-    setMessages([...messages, newMessage]);
+    setMessages(prev => [...prev, userMessage]);
+    await saveMessage(inputText, 'user');
     
-    // Simulate AI response
-    setTimeout(() => {
-      const botResponse = {
-        id: messages.length + 2,
-        sender: 'bot',
-        text: "I found some great eco-friendly options for you! Let me show you some sustainable alternatives that match your needs.",
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      setMessages(prev => [...prev, botResponse]);
-    }, 1000);
-
+    const currentInput = inputText;
     setInputText('');
+    setIsTyping(true);
+
+    try {
+      const conversationHistory = messages.map(msg => ({
+        role: msg.sender === 'user' ? 'user' : 'assistant',
+        content: msg.text
+      }));
+
+      const { data, error } = await supabase.functions.invoke('chat-ai', {
+        body: {
+          message: currentInput,
+          conversationHistory
+        }
+      });
+
+      if (error) throw error;
+
+      const botResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        sender: 'bot',
+        text: data.response || "I'm sorry, I couldn't generate a response.",
+        timestamp: new Date()
+      };
+
+      setMessages(prev => [...prev, botResponse]);
+      await saveMessage(botResponse.text, 'ai');
+
+    } catch (error) {
+      console.error('Error getting AI response:', error);
+      toast.error('Failed to get AI response. Please try again.');
+      
+      const errorResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        sender: 'bot',
+        text: "I'm sorry, I'm having trouble connecting right now. Please try again later.",
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, errorResponse]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   const suggestedQueries = [
@@ -51,6 +155,14 @@ const Chat = () => {
     "Help me list my old bike",
     "Best sustainable fashion options"
   ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-green-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -99,12 +211,30 @@ const Chat = () => {
                           <div className={`p-3 rounded-lg ${message.sender === 'user' ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-800'}`}>
                             <p className="text-sm">{message.text}</p>
                             <p className={`text-xs mt-1 ${message.sender === 'user' ? 'text-green-100' : 'text-gray-500'}`}>
-                              {message.time}
+                              {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </p>
                           </div>
                         </div>
                       </div>
                     ))}
+                    
+                    {isTyping && (
+                      <div className="flex justify-start">
+                        <div className="flex space-x-2 max-w-xs lg:max-w-md">
+                          <div className="w-8 h-8 rounded-full flex items-center justify-center bg-gray-300">
+                            <Bot className="w-4 h-4 text-gray-600" />
+                          </div>
+                          <div className="p-3 rounded-lg bg-gray-100 text-gray-800">
+                            <div className="flex space-x-1">
+                              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    <div ref={messagesEndRef} />
                   </div>
                 </CardContent>
 
@@ -115,8 +245,13 @@ const Chat = () => {
                       onChange={(e) => setInputText(e.target.value)}
                       placeholder="Ask me anything about sustainable shopping..."
                       className="flex-1"
+                      disabled={isTyping}
                     />
-                    <Button type="submit" className="bg-green-500 hover:bg-green-600">
+                    <Button 
+                      type="submit" 
+                      className="bg-green-500 hover:bg-green-600"
+                      disabled={isTyping || !inputText.trim()}
+                    >
                       <Send className="w-4 h-4" />
                     </Button>
                   </form>
@@ -140,6 +275,7 @@ const Chat = () => {
                       variant="outline"
                       className="w-full text-left justify-start h-auto p-3"
                       onClick={() => setInputText(query)}
+                      disabled={isTyping}
                     >
                       {query}
                     </Button>
