@@ -1,59 +1,215 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 import Navigation from '@/components/Navigation';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Filter, MapPin, Heart, Leaf } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Search, Filter, Heart, MessageCircle, MapPin, Star } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+
+interface Product {
+  id: string;
+  title: string;
+  price: number;
+  is_free: boolean;
+  listing_type: string;
+  location: string;
+  images: string[];
+  condition: string;
+  user_id: string;
+  category_id: string;
+  created_at: string;
+  profiles: {
+    first_name: string;
+    last_name: string;
+  };
+}
 
 const Browse = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const { user } = useAuth();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<string>('newest');
+  const [filterType, setFilterType] = useState<string>('all');
+  const [priceRange, setPriceRange] = useState<string>('all');
+  const [isLoading, setIsLoading] = useState(true);
+  const [categories, setCategories] = useState<any[]>([]);
 
-  const products = [
-    {
-      id: 1,
-      title: "Vintage Wooden Bookshelf",
-      price: "₹2,500",
-      type: "Sell",
-      location: "2.1 km away",
-      co2Saved: "15kg",
-      image: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400&h=300&fit=crop",
-      condition: "Good",
-      category: "furniture"
-    },
-    {
-      id: 2,
-      title: "Gaming Laptop - RTX 3060",
-      price: "₹800/day",
-      type: "Rent",
-      location: "1.5 km away",
-      co2Saved: "25kg",
-      image: "https://images.unsplash.com/photo-1603302576837-37561b2e2302?w=400&h=300&fit=crop",
-      condition: "Excellent",
-      category: "electronics"
-    },
-    {
-      id: 3,
-      title: "Designer Office Chair",
-      price: "₹4,200",
-      type: "Sell",
-      location: "800m away",
-      co2Saved: "12kg",
-      image: "https://images.unsplash.com/photo-1586540040850-49d8bf13b2a4?w=400&h=300&fit=crop",
-      condition: "Like New",
-      category: "furniture"
+  useEffect(() => {
+    fetchCategories();
+    fetchProducts();
+  }, []);
+
+  useEffect(() => {
+    filterAndSortProducts();
+  }, [searchQuery, selectedCategory, sortBy, filterType, priceRange, products]);
+
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('name');
+
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
     }
-  ];
+  };
 
-  const categories = ['all', 'furniture', 'electronics', 'books', 'fashion'];
+  const fetchProducts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select(`
+          *,
+          profiles:user_id (
+            first_name,
+            last_name
+          )
+        `)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false });
 
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+      if (error) throw error;
+      setProducts(data || []);
+      setIsLoading(false);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      setIsLoading(false);
+    }
+  };
+
+  const filterAndSortProducts = () => {
+    let filtered = products;
+
+    // Search filter
+    if (searchQuery) {
+      filtered = filtered.filter(product =>
+        product.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        product.location?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // Category filter
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(product => product.category_id === selectedCategory);
+    }
+
+    // Type filter
+    if (filterType !== 'all') {
+      if (filterType === 'free') {
+        filtered = filtered.filter(product => product.is_free);
+      } else {
+        filtered = filtered.filter(product => product.listing_type === filterType);
+      }
+    }
+
+    // Price range filter
+    if (priceRange !== 'all' && !filtered.some(p => p.is_free)) {
+      switch (priceRange) {
+        case 'under-1000':
+          filtered = filtered.filter(product => product.price < 1000);
+          break;
+        case '1000-5000':
+          filtered = filtered.filter(product => product.price >= 1000 && product.price <= 5000);
+          break;
+        case '5000-25000':
+          filtered = filtered.filter(product => product.price >= 5000 && product.price <= 25000);
+          break;
+        case 'above-25000':
+          filtered = filtered.filter(product => product.price > 25000);
+          break;
+      }
+    }
+
+    // Sort
+    switch (sortBy) {
+      case 'price-low':
+        filtered = filtered.sort((a, b) => (a.is_free ? 0 : a.price) - (b.is_free ? 0 : b.price));
+        break;
+      case 'price-high':
+        filtered = filtered.sort((a, b) => (b.is_free ? 0 : b.price) - (a.is_free ? 0 : a.price));
+        break;
+      case 'newest':
+        filtered = filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        break;
+      case 'oldest':
+        filtered = filtered.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        break;
+    }
+
+    setFilteredProducts(filtered);
+  };
+
+  const handleContactSeller = async (productId: string, sellerId: string, productTitle: string) => {
+    if (!user) {
+      toast.error('Please sign in to contact sellers');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('inquiries')
+        .insert([
+          {
+            product_id: productId,
+            buyer_id: user.id,
+            seller_id: sellerId,
+            message: `Hi! I'm interested in your product: ${productTitle}`
+          }
+        ]);
+
+      if (error) throw error;
+      toast.success('Message sent to seller!');
+    } catch (error) {
+      console.error('Error contacting seller:', error);
+      toast.error('Failed to send message');
+    }
+  };
+
+  const handleAddToFavorites = async (productId: string) => {
+    if (!user) {
+      toast.error('Please sign in to add favorites');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('favorites')
+        .insert([
+          {
+            user_id: user.id,
+            product_id: productId
+          }
+        ]);
+
+      if (error) throw error;
+      toast.success('Added to favorites!');
+    } catch (error) {
+      console.error('Error adding to favorites:', error);
+      if (error.code === '23505') {
+        toast.error('Already in favorites');
+      } else {
+        toast.error('Failed to add to favorites');
+      }
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-green-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -61,92 +217,170 @@ const Browse = () => {
       
       <div className="pt-24 pb-16 px-4">
         <div className="max-w-7xl mx-auto">
-          {/* Header */}
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold gradient-text mb-4">
               Browse Products
             </h1>
             <p className="text-gray-600 text-lg">
-              Discover amazing pre-loved items in your community
+              Discover amazing pre-loved items in your area
             </p>
           </div>
 
-          {/* Search and Filters */}
-          <div className="mb-8">
-            <div className="flex flex-col md:flex-row gap-4 mb-6">
-              <div className="flex-1 relative">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          {/* Filters */}
+          <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
-                  placeholder="Search for products..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-12 h-12"
+                  placeholder="Search products..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
                 />
               </div>
-              <Button variant="outline" className="flex items-center space-x-2">
-                <Filter className="w-4 h-4" />
-                <span>Filters</span>
-              </Button>
-            </div>
+              
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {categories.map(category => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-            {/* Category Pills */}
-            <div className="flex flex-wrap gap-2">
-              {categories.map((category) => (
-                <Button
-                  key={category}
-                  variant={selectedCategory === category ? "default" : "outline"}
-                  onClick={() => setSelectedCategory(category)}
-                  className="capitalize"
-                >
-                  {category}
-                </Button>
-              ))}
+              <Select value={filterType} onValueChange={setFilterType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="sell">For Sale</SelectItem>
+                  <SelectItem value="rent">For Rent</SelectItem>
+                  <SelectItem value="exchange">Exchange</SelectItem>
+                  <SelectItem value="free">Free Items</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={priceRange} onValueChange={setPriceRange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Price Range" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Prices</SelectItem>
+                  <SelectItem value="under-1000">Under ₹1,000</SelectItem>
+                  <SelectItem value="1000-5000">₹1,000 - ₹5,000</SelectItem>
+                  <SelectItem value="5000-25000">₹5,000 - ₹25,000</SelectItem>
+                  <SelectItem value="above-25000">Above ₹25,000</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="newest">Newest First</SelectItem>
+                  <SelectItem value="oldest">Oldest First</SelectItem>
+                  <SelectItem value="price-low">Price: Low to High</SelectItem>
+                  <SelectItem value="price-high">Price: High to Low</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
+          {/* Results */}
+          <div className="flex items-center justify-between mb-6">
+            <p className="text-gray-600">
+              Showing {filteredProducts.length} products
+            </p>
+            <Button variant="outline" onClick={fetchProducts}>
+              <Filter className="w-4 h-4 mr-2" />
+              Refresh
+            </Button>
+          </div>
+
           {/* Products Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredProducts.map((product) => (
-              <Card key={product.id} className="overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer">
+              <Card key={product.id} className="hover:shadow-xl transition-shadow duration-300">
                 <div className="relative">
                   <img
-                    src={product.image}
+                    src={product.images?.[0] || 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400&h=300&fit=crop'}
                     alt={product.title}
-                    className="w-full h-48 object-cover"
+                    className="w-full h-48 object-cover rounded-t-lg"
                   />
-                  <div className="absolute top-3 left-3">
-                    <Badge className={product.type === 'Rent' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'}>
-                      {product.type}
+                  <div className="absolute top-2 left-2">
+                    <Badge className={
+                      product.listing_type === 'rent' ? 'bg-blue-500' :
+                      product.is_free ? 'bg-green-500' :
+                      'bg-amber-500'
+                    }>
+                      {product.is_free ? 'Free' : product.listing_type}
                     </Badge>
                   </div>
-                  <div className="absolute top-3 right-3">
-                    <Button size="icon" variant="ghost" className="bg-white/80 backdrop-blur-sm h-8 w-8">
-                      <Heart className="h-4 w-4" />
+                  <div className="absolute top-2 right-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="bg-white/90 hover:bg-white"
+                      onClick={() => handleAddToFavorites(product.id)}
+                    >
+                      <Heart className="w-4 h-4" />
                     </Button>
                   </div>
-                  <div className="absolute bottom-3 right-3">
-                    <div className="eco-badge flex items-center space-x-1">
-                      <Leaf className="w-3 h-3" />
-                      <span className="text-xs">{product.co2Saved} CO₂</span>
-                    </div>
-                  </div>
                 </div>
-
+                
                 <CardContent className="p-4">
-                  <h3 className="font-semibold text-lg mb-2">{product.title}</h3>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-2xl font-bold text-green-600">{product.price}</span>
-                    <Badge variant="outline">{product.condition}</Badge>
-                  </div>
+                  <h3 className="font-semibold text-lg mb-2 line-clamp-2">{product.title}</h3>
+                  <p className="text-2xl font-bold text-green-600 mb-2">
+                    {product.is_free ? 'Free' : `₹${product.price}`}
+                  </p>
+                  
                   <div className="flex items-center text-gray-500 text-sm mb-3">
                     <MapPin className="w-4 h-4 mr-1" />
-                    <span>{product.location}</span>
+                    <span>{product.location || 'Location not specified'}</span>
                   </div>
-                  <Button className="w-full">View Details</Button>
+
+                  <div className="flex items-center justify-between mb-3">
+                    <Badge variant="outline" className="text-xs">
+                      {product.condition}
+                    </Badge>
+                    <div className="flex items-center text-xs text-gray-500">
+                      <Star className="w-3 h-3 mr-1 fill-current text-yellow-500" />
+                      <span>
+                        {product.profiles?.first_name} {product.profiles?.last_name}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex space-x-2">
+                    <Button 
+                      className="flex-1"
+                      onClick={() => handleContactSeller(product.id, product.user_id, product.title)}
+                    >
+                      <MessageCircle className="w-4 h-4 mr-2" />
+                      Contact
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
           </div>
+
+          {filteredProducts.length === 0 && (
+            <div className="text-center py-12">
+              <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Search className="w-8 h-8 text-gray-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-600 mb-2">No products found</h3>
+              <p className="text-gray-500">Try adjusting your filters or search terms</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
