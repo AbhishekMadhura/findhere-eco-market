@@ -3,8 +3,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Search, MapPin, Sparkles } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { useNavigate } from 'react-router-dom';
 
 const HeroSection = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="pt-24 pb-16 px-4 bg-gradient-to-br from-white via-green-50 to-emerald-100 relative overflow-hidden">
       {/* Background Elements */}
@@ -52,7 +55,11 @@ const HeroSection = () => {
                   <MapPin className="w-4 h-4" />
                   <span>Near me</span>
                 </Button>
-                <Button size="lg" className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 h-12 px-8">
+                <Button 
+                  size="lg" 
+                  className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 h-12 px-8"
+                  onClick={() => navigate('/browse')}
+                >
                   Search
                 </Button>
               </div>
@@ -64,6 +71,7 @@ const HeroSection = () => {
             <Button 
               size="lg" 
               className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-lg px-8 py-6 h-auto animate-pulse-green"
+              onClick={() => navigate('/browse')}
             >
               🛍️ Start Shopping
             </Button>
@@ -71,6 +79,7 @@ const HeroSection = () => {
               size="lg" 
               variant="outline" 
               className="border-green-300 text-green-700 hover:bg-green-50 text-lg px-8 py-6 h-auto"
+              onClick={() => navigate('/add-product')}
             >
               💰 Sell Your Items
             </Button>

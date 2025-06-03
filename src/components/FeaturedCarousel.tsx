@@ -4,9 +4,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Heart, MapPin, Leaf } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const FeaturedCarousel = () => {
   const [hoveredCard, setHoveredCard] = useState<number | null>(null);
+  const navigate = useNavigate();
 
   const featuredProducts = [
     {
@@ -54,6 +56,15 @@ const FeaturedCarousel = () => {
       seller: "Music Hub"
     }
   ];
+
+  const handleProductClick = (productId: number) => {
+    console.log(`View product ${productId}`);
+    navigate('/browse');
+  };
+
+  const handleViewAllClick = () => {
+    navigate('/browse');
+  };
 
   return (
     <div className="py-16 px-4">
@@ -138,7 +149,7 @@ const FeaturedCarousel = () => {
 
                 <Button 
                   className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
-                  onClick={() => console.log(`View product ${product.id}`)}
+                  onClick={() => handleProductClick(product.id)}
                 >
                   {product.type === 'Rent' ? 'Rent Now' : 'Buy Now'}
                 </Button>
@@ -152,6 +163,7 @@ const FeaturedCarousel = () => {
             variant="outline" 
             size="lg"
             className="border-green-200 text-green-700 hover:bg-green-50"
+            onClick={handleViewAllClick}
           >
             View All Featured Products
           </Button>

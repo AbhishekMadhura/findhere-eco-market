@@ -4,10 +4,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Leaf, Recycle, Globe, TrendingUp } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const SustainabilityHighlight = () => {
   const [co2Counter, setCo2Counter] = useState(0);
   const [itemsReused, setItemsReused] = useState(0);
+  const navigate = useNavigate();
 
   // Animate counters on component mount
   useEffect(() => {
@@ -95,6 +97,7 @@ const SustainabilityHighlight = () => {
                 <Button 
                   size="lg" 
                   className="bg-white text-green-600 hover:bg-green-50 font-semibold"
+                  onClick={() => navigate('/auth')}
                 >
                   Join the Movement 🚀
                 </Button>

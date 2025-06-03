@@ -2,8 +2,11 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Sofa, Book, Laptop, Car, ShirtIcon, Camera, Music, Gamepad2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const QuickCategories = () => {
+  const navigate = useNavigate();
+
   const categories = [
     { 
       name: 'Furniture', 
@@ -63,6 +66,11 @@ const QuickCategories = () => {
     }
   ];
 
+  const handleCategoryClick = (categoryName: string) => {
+    console.log(`Browse ${categoryName}`);
+    navigate('/browse');
+  };
+
   return (
     <div className="py-16 px-4 bg-white">
       <div className="max-w-7xl mx-auto">
@@ -84,7 +92,7 @@ const QuickCategories = () => {
                 animationDelay: `${index * 100}ms`,
                 animation: 'fade-in 0.6s ease-out forwards'
               }}
-              onClick={() => console.log(`Browse ${category.name}`)}
+              onClick={() => handleCategoryClick(category.name)}
             >
               <CardContent className="p-6 text-center">
                 <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${category.color} flex items-center justify-center mx-auto mb-3 animate-float`}>
@@ -108,9 +116,12 @@ const QuickCategories = () => {
             <span className="text-green-700 font-medium">
               🎯 Can't find your category?
             </span>
-            <span className="text-green-600 text-sm">
+            <button 
+              className="text-green-600 text-sm hover:underline"
+              onClick={() => navigate('/chat')}
+            >
               Try our AI-powered search assistant
-            </span>
+            </button>
           </div>
         </div>
       </div>
