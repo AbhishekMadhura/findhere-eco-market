@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import Navigation from '@/components/Navigation';
@@ -7,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Filter, Heart, MessageCircle, MapPin, Star } from 'lucide-react';
+import { Search, Filter, Heart, MessageCircle, MapPin, Star, Grid, List } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -38,6 +37,7 @@ const Browse = () => {
   const [sortBy, setSortBy] = useState<string>('newest');
   const [filterType, setFilterType] = useState<string>('all');
   const [priceRange, setPriceRange] = useState<string>('all');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isLoading, setIsLoading] = useState(true);
   const [categories, setCategories] = useState<any[]>([]);
 
@@ -90,7 +90,6 @@ const Browse = () => {
   const filterAndSortProducts = () => {
     let filtered = products;
 
-    // Search filter
     if (searchQuery) {
       filtered = filtered.filter(product =>
         product.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -98,12 +97,10 @@ const Browse = () => {
       );
     }
 
-    // Category filter
     if (selectedCategory !== 'all') {
       filtered = filtered.filter(product => product.category_id === selectedCategory);
     }
 
-    // Type filter
     if (filterType !== 'all') {
       if (filterType === 'free') {
         filtered = filtered.filter(product => product.is_free);
@@ -112,7 +109,6 @@ const Browse = () => {
       }
     }
 
-    // Price range filter
     if (priceRange !== 'all' && !filtered.some(p => p.is_free)) {
       switch (priceRange) {
         case 'under-1000':
@@ -130,7 +126,6 @@ const Browse = () => {
       }
     }
 
-    // Sort
     switch (sortBy) {
       case 'price-low':
         filtered = filtered.sort((a, b) => (a.is_free ? 0 : a.price) - (b.is_free ? 0 : b.price));
@@ -206,7 +201,7 @@ const Browse = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-green-500"></div>
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-500"></div>
       </div>
     );
   }
@@ -215,32 +210,32 @@ const Browse = () => {
     <div className="min-h-screen bg-gray-50">
       <Navigation />
       
-      <div className="pt-24 pb-16 px-4">
+      <div className="pt-20 pb-16 px-4">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold gradient-text mb-4">
-              Browse Products
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent mb-4">
+              Discover Amazing Products
             </h1>
             <p className="text-gray-600 text-lg">
-              Discover amazing pre-loved items in your area
+              Find, rent, and buy pre-loved items in your area
             </p>
           </div>
 
-          {/* Filters */}
-          <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          {/* Enhanced Filters - Ajio Style */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+              <div className="relative lg:col-span-2">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <Input
-                  placeholder="Search products..."
+                  placeholder="Search for products, brands, or sellers..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
+                  className="pl-12 h-12 border-gray-200 focus:border-orange-400 rounded-xl"
                 />
               </div>
               
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger>
+                <SelectTrigger className="h-12 border-gray-200 rounded-xl">
                   <SelectValue placeholder="Category" />
                 </SelectTrigger>
                 <SelectContent>
@@ -254,7 +249,7 @@ const Browse = () => {
               </Select>
 
               <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger>
+                <SelectTrigger className="h-12 border-gray-200 rounded-xl">
                   <SelectValue placeholder="Type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -267,7 +262,7 @@ const Browse = () => {
               </Select>
 
               <Select value={priceRange} onValueChange={setPriceRange}>
-                <SelectTrigger>
+                <SelectTrigger className="h-12 border-gray-200 rounded-xl">
                   <SelectValue placeholder="Price Range" />
                 </SelectTrigger>
                 <SelectContent>
@@ -280,7 +275,7 @@ const Browse = () => {
               </Select>
 
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger>
+                <SelectTrigger className="h-12 border-gray-200 rounded-xl">
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
                 <SelectContent>
@@ -293,41 +288,68 @@ const Browse = () => {
             </div>
           </div>
 
-          {/* Results */}
+          {/* Results Header */}
           <div className="flex items-center justify-between mb-6">
-            <p className="text-gray-600">
-              Showing {filteredProducts.length} products
-            </p>
-            <Button variant="outline" onClick={fetchProducts}>
+            <div className="flex items-center space-x-4">
+              <p className="text-gray-600 font-medium">
+                <span className="text-orange-600 font-bold">{filteredProducts.length}</span> products found
+              </p>
+              <div className="h-4 w-px bg-gray-300"></div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant={viewMode === 'grid' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('grid')}
+                  className="h-9"
+                >
+                  <Grid className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant={viewMode === 'list' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('list')}
+                  className="h-9"
+                >
+                  <List className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+            <Button variant="outline" onClick={fetchProducts} className="h-9">
               <Filter className="w-4 h-4 mr-2" />
               Refresh
             </Button>
           </div>
 
-          {/* Products Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {/* Products Grid - Ajio Style */}
+          <div className={
+            viewMode === 'grid' 
+              ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+              : "space-y-4"
+          }>
             {filteredProducts.map((product) => (
-              <Card key={product.id} className="hover:shadow-xl transition-shadow duration-300">
-                <div className="relative">
+              <Card key={product.id} className="group hover:shadow-2xl transition-all duration-300 border-0 rounded-2xl overflow-hidden bg-white">
+                <div className="relative overflow-hidden">
                   <img
                     src={product.images?.[0] || 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400&h=300&fit=crop'}
                     alt={product.title}
-                    className="w-full h-48 object-cover rounded-t-lg"
+                    className={`w-full object-cover group-hover:scale-105 transition-transform duration-300 ${
+                      viewMode === 'grid' ? 'h-48' : 'h-32'
+                    }`}
                   />
-                  <div className="absolute top-2 left-2">
+                  <div className="absolute top-3 left-3">
                     <Badge className={
-                      product.listing_type === 'rent' ? 'bg-blue-500' :
-                      product.is_free ? 'bg-green-500' :
-                      'bg-amber-500'
+                      product.listing_type === 'rent' ? 'bg-blue-500 hover:bg-blue-600' :
+                      product.is_free ? 'bg-green-500 hover:bg-green-600' :
+                      'bg-orange-500 hover:bg-orange-600'
                     }>
                       {product.is_free ? 'Free' : product.listing_type}
                     </Badge>
                   </div>
-                  <div className="absolute top-2 right-2">
+                  <div className="absolute top-3 right-3">
                     <Button
                       size="sm"
                       variant="outline"
-                      className="bg-white/90 hover:bg-white"
+                      className="bg-white/90 hover:bg-white border-0 shadow-md h-9 w-9 p-0"
                       onClick={() => handleAddToFavorites(product.id)}
                     >
                       <Heart className="w-4 h-4" />
@@ -336,9 +358,11 @@ const Browse = () => {
                 </div>
                 
                 <CardContent className="p-4">
-                  <h3 className="font-semibold text-lg mb-2 line-clamp-2">{product.title}</h3>
-                  <p className="text-2xl font-bold text-green-600 mb-2">
-                    {product.is_free ? 'Free' : `₹${product.price}`}
+                  <h3 className="font-semibold text-lg mb-2 line-clamp-2 group-hover:text-orange-600 transition-colors">
+                    {product.title}
+                  </h3>
+                  <p className="text-2xl font-bold text-orange-600 mb-3">
+                    {product.is_free ? 'Free' : `₹${product.price.toLocaleString()}`}
                   </p>
                   
                   <div className="flex items-center text-gray-500 text-sm mb-3">
@@ -346,8 +370,8 @@ const Browse = () => {
                     <span>{product.location || 'Location not specified'}</span>
                   </div>
 
-                  <div className="flex items-center justify-between mb-3">
-                    <Badge variant="outline" className="text-xs">
+                  <div className="flex items-center justify-between mb-4">
+                    <Badge variant="outline" className="text-xs border-gray-200">
                       {product.condition}
                     </Badge>
                     <div className="flex items-center text-xs text-gray-500">
@@ -358,26 +382,24 @@ const Browse = () => {
                     </div>
                   </div>
 
-                  <div className="flex space-x-2">
-                    <Button 
-                      className="flex-1"
-                      onClick={() => handleContactSeller(product.id, product.user_id, product.title)}
-                    >
-                      <MessageCircle className="w-4 h-4 mr-2" />
-                      Contact
-                    </Button>
-                  </div>
+                  <Button 
+                    className="w-full bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-xl"
+                    onClick={() => handleContactSeller(product.id, product.user_id, product.title)}
+                  >
+                    <MessageCircle className="w-4 h-4 mr-2" />
+                    Contact Seller
+                  </Button>
                 </CardContent>
               </Card>
             ))}
           </div>
 
           {filteredProducts.length === 0 && (
-            <div className="text-center py-12">
-              <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Search className="w-8 h-8 text-gray-400" />
+            <div className="text-center py-16">
+              <div className="w-32 h-32 bg-gradient-to-br from-orange-100 to-pink-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Search className="w-12 h-12 text-orange-400" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-600 mb-2">No products found</h3>
+              <h3 className="text-2xl font-semibold text-gray-600 mb-2">No products found</h3>
               <p className="text-gray-500">Try adjusting your filters or search terms</p>
             </div>
           )}

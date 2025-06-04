@@ -2,7 +2,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { corsHeaders } from '../_shared/cors.ts'
 
-const DEEPSEEK_API_KEY = Deno.env.get('DEEPSEEK_API_KEY')
+const HUGGING_FACE_TOKEN = Deno.env.get('HUGGING_FACE_ACCESS_TOKEN')
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -12,9 +12,9 @@ serve(async (req) => {
   try {
     const { message, conversationHistory = [] } = await req.json()
 
-    if (!DEEPSEEK_API_KEY) {
+    if (!HUGGING_FACE_TOKEN) {
       return new Response(
-        JSON.stringify({ error: 'DEEPSEEK_API_KEY not configured' }),
+        JSON.stringify({ error: 'HUGGING_FACE_ACCESS_TOKEN not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -31,26 +31,28 @@ serve(async (req) => {
       }
     ]
 
-    const response = await fetch('https://api.deepseek.com/chat/completions', {
+    const response = await fetch('https://api-inference.huggingface.co/models/deepseek-ai/deepseek-coder-6.7b-instruct', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
+        'Authorization': `Bearer ${HUGGING_FACE_TOKEN}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'deepseek-chat',
-        messages: messages,
-        max_tokens: 500,
-        temperature: 0.7,
+        inputs: message,
+        parameters: {
+          max_length: 500,
+          temperature: 0.7,
+          do_sample: true,
+        },
       }),
     })
 
     if (!response.ok) {
-      throw new Error(`DeepSeek API error: ${response.status}`)
+      throw new Error(`Hugging Face API error: ${response.status}`)
     }
 
     const data = await response.json()
-    const aiResponse = data.choices[0]?.message?.content || "I'm sorry, I couldn't generate a response."
+    const aiResponse = data[0]?.generated_text || "I'm sorry, I couldn't generate a response."
 
     return new Response(
       JSON.stringify({ response: aiResponse }),

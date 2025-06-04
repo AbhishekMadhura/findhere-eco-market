@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import Navigation from '@/components/Navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,8 +29,6 @@ interface Product {
 const Map = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const mapRef = useRef<HTMLDivElement>(null);
-  const [map, setMap] = useState<google.maps.Map | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -38,7 +36,6 @@ const Map = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'sell' | 'rent' | 'exchange'>('all');
   const [isLoading, setIsLoading] = useState(true);
-  const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -47,7 +44,7 @@ const Map = () => {
   }, [user, loading, navigate]);
 
   useEffect(() => {
-    initializeMap();
+    getUserLocation();
     fetchProducts();
   }, []);
 
@@ -55,69 +52,25 @@ const Map = () => {
     filterProducts();
   }, [searchQuery, filterType, products]);
 
-  const initializeMap = async () => {
-    if (!mapRef.current) return;
-
-    try {
-      // Get user's current location
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const userPos = {
-              lat: position.coords.latitude,
-              lng: position.coords.longitude
-            };
-            setUserLocation(userPos);
-            
-            // Initialize Google Map
-            const mapInstance = new google.maps.Map(mapRef.current!, {
-              center: userPos,
-              zoom: 13,
-              styles: [
-                {
-                  featureType: 'poi',
-                  elementType: 'labels',
-                  stylers: [{ visibility: 'off' }]
-                }
-              ]
-            });
-
-            setMap(mapInstance);
-
-            // Add user location marker
-            new google.maps.Marker({
-              position: userPos,
-              map: mapInstance,
-              title: 'Your Location',
-              icon: {
-                url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-                  <svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="15" cy="15" r="15" fill="#3B82F6"/>
-                    <circle cx="15" cy="15" r="8" fill="white"/>
-                    <circle cx="15" cy="15" r="4" fill="#3B82F6"/>
-                  </svg>
-                `),
-                scaledSize: new google.maps.Size(30, 30)
-              }
-            });
-          },
-          (error) => {
-            console.error('Error getting location:', error);
-            // Default to a central location if geolocation fails
-            const defaultPos = { lat: 28.6139, lng: 77.2090 }; // Delhi
-            setUserLocation(defaultPos);
-            
-            const mapInstance = new google.maps.Map(mapRef.current!, {
-              center: defaultPos,
-              zoom: 13
-            });
-            setMap(mapInstance);
-          }
-        );
-      }
-    } catch (error) {
-      console.error('Error initializing map:', error);
-      toast.error('Failed to load map');
+  const getUserLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const userPos = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+          setUserLocation(userPos);
+        },
+        (error) => {
+          console.error('Error getting location:', error);
+          // Default to Delhi if geolocation fails
+          setUserLocation({ lat: 28.6139, lng: 77.2090 });
+        }
+      );
+    } else {
+      // Default location if geolocation is not supported
+      setUserLocation({ lat: 28.6139, lng: 77.2090 });
     }
   };
 
@@ -192,42 +145,6 @@ const Map = () => {
     filtered = filtered.sort((a, b) => (a.distance || 0) - (b.distance || 0));
     
     setFilteredProducts(filtered);
-    updateMapMarkers(filtered);
-  };
-
-  const updateMapMarkers = (products: Product[]) => {
-    if (!map) return;
-
-    // Clear existing markers
-    markers.forEach(marker => marker.setMap(null));
-
-    // Create new markers
-    const newMarkers = products.map(product => {
-      const marker = new google.maps.Marker({
-        position: { lat: product.latitude, lng: product.longitude },
-        map: map,
-        title: product.title,
-        icon: {
-          url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-            <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M20 0C12.3 0 6 6.3 6 14c0 10.5 14 26 14 26s14-15.5 14-26c0-7.7-6.3-14-14-14z" fill="${product.listing_type === 'rent' ? '#3B82F6' : product.is_free ? '#10B981' : '#F59E0B'}"/>
-              <circle cx="20" cy="14" r="8" fill="white"/>
-              <text x="20" y="18" text-anchor="middle" fill="${product.listing_type === 'rent' ? '#3B82F6' : product.is_free ? '#10B981' : '#F59E0B'}" font-size="12" font-weight="bold">${product.is_free ? 'F' : product.listing_type === 'rent' ? 'R' : 'S'}</text>
-            </svg>
-          `),
-          scaledSize: new google.maps.Size(40, 40)
-        }
-      });
-
-      marker.addListener('click', () => {
-        setSelectedProduct(product);
-        map.panTo({ lat: product.latitude, lng: product.longitude });
-      });
-
-      return marker;
-    });
-
-    setMarkers(newMarkers);
   };
 
   const handleContactSeller = async (productId: string, sellerId: string) => {
@@ -294,22 +211,29 @@ const Map = () => {
       
       <div className="pt-16">
         <div className="grid grid-cols-1 lg:grid-cols-3 h-screen">
-          {/* Map Area */}
-          <div className="lg:col-span-2 relative">
-            <div ref={mapRef} className="w-full h-full" />
-            
+          {/* Map Area - Simple location display */}
+          <div className="lg:col-span-2 relative bg-green-50 flex items-center justify-center">
+            <div className="text-center p-8">
+              <MapPin className="w-24 h-24 text-green-600 mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">Local Products Map</h2>
+              <p className="text-gray-600 mb-4">
+                {userLocation 
+                  ? `Showing products near ${userLocation.lat.toFixed(2)}, ${userLocation.lng.toFixed(2)}`
+                  : 'Getting your location...'
+                }
+              </p>
+              <Badge className="eco-badge">
+                {filteredProducts.length} products nearby
+              </Badge>
+            </div>
+
             {/* Map Controls */}
             <div className="absolute top-4 right-4 space-y-2">
               <Button 
                 variant="outline" 
                 size="icon" 
                 className="bg-white shadow-lg"
-                onClick={() => {
-                  if (userLocation && map) {
-                    map.panTo(userLocation);
-                    map.setZoom(15);
-                  }
-                }}
+                onClick={getUserLocation}
               >
                 <Navigation2 className="w-4 h-4" />
               </Button>
@@ -367,7 +291,7 @@ const Map = () => {
             )}
           </div>
 
-          {/* Sidebar */}
+          {/* Products Sidebar */}
           <div className="bg-white border-l overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
@@ -412,13 +336,7 @@ const Map = () => {
                     className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
                       selectedProduct?.id === product.id ? 'ring-2 ring-green-500' : ''
                     }`}
-                    onClick={() => {
-                      setSelectedProduct(product);
-                      if (map) {
-                        map.panTo({ lat: product.latitude, lng: product.longitude });
-                        map.setZoom(16);
-                      }
-                    }}
+                    onClick={() => setSelectedProduct(product)}
                   >
                     <CardContent className="p-4">
                       <div className="flex space-x-3">
@@ -444,27 +362,6 @@ const Map = () => {
                           <div className="flex items-center text-gray-500 text-sm mt-2">
                             <MapPin className="w-3 h-3 mr-1" />
                             <span>{product.distance?.toFixed(1)} km away</span>
-                          </div>
-                          <div className="flex space-x-2 mt-2">
-                            <Button 
-                              size="sm" 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleContactSeller(product.id, product.user_id);
-                              }}
-                            >
-                              Contact
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleAddToFavorites(product.id);
-                              }}
-                            >
-                              <Heart className="w-3 h-3" />
-                            </Button>
                           </div>
                         </div>
                       </div>
