@@ -44,9 +44,9 @@ const Navigation = () => {
               </span>
               <span className="text-xs text-gray-500 -mt-1">Rent • Buy • Share</span>
             </div>
-            <Badge className="bg-gradient-to-r from-orange-100 to-pink-100 text-orange-600 text-xs border-orange-200">
+{/*             <Badge className="bg-gradient-to-r from-orange-100 to-pink-100 text-orange-600 text-xs border-orange-200">
               Beta
-            </Badge>
+            </Badge> */}
           </div>
 
           {/* Desktop Navigation */}
