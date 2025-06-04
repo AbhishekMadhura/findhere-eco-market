@@ -6,8 +6,10 @@ import { useProductFilters } from '@/hooks/useProductFilters';
 import Navigation from '@/components/Navigation';
 import BrowseFilters from '@/components/BrowseFilters';
 import ProductsGrid from '@/components/ProductsGrid';
+import ProductDetailModal from '@/components/ProductDetailModal';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { Product } from '@/types/product';
 
 const Browse = () => {
   const { user } = useAuth();
@@ -27,6 +29,8 @@ const Browse = () => {
   } = useProductFilters(products);
   
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleContactSeller = async (productId: string, sellerId: string, productTitle: string) => {
     if (!user) {
@@ -82,6 +86,16 @@ const Browse = () => {
     }
   };
 
+  const handleProductClick = (product: Product) => {
+    setSelectedProduct(product);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedProduct(null);
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -126,6 +140,15 @@ const Browse = () => {
             onContactSeller={handleContactSeller}
             onAddToFavorites={handleAddToFavorites}
             onRefresh={refetchProducts}
+            onProductClick={handleProductClick}
+          />
+
+          <ProductDetailModal
+            product={selectedProduct}
+            isOpen={isModalOpen}
+            onClose={handleCloseModal}
+            onContactSeller={handleContactSeller}
+            onAddToFavorites={handleAddToFavorites}
           />
         </div>
       </div>

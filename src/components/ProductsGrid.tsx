@@ -1,3 +1,4 @@
+
 import { Grid, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ProductCard from './ProductCard';
@@ -10,6 +11,7 @@ interface ProductsGridProps {
   onContactSeller: (productId: string, sellerId: string, productTitle: string) => void;
   onAddToFavorites: (productId: string) => void;
   onRefresh: () => void;
+  onProductClick: (product: Product) => void;
 }
 
 const ProductsGrid = ({ 
@@ -18,7 +20,8 @@ const ProductsGrid = ({
   onViewModeChange, 
   onContactSeller, 
   onAddToFavorites, 
-  onRefresh 
+  onRefresh,
+  onProductClick
 }: ProductsGridProps) => {
   return (
     <>
@@ -66,6 +69,7 @@ const ProductsGrid = ({
             viewMode={viewMode}
             onContactSeller={onContactSeller}
             onAddToFavorites={onAddToFavorites}
+            onProductClick={onProductClick}
           />
         ))}
       </div>

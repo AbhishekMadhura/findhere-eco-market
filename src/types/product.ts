@@ -2,6 +2,7 @@
 export interface Product {
   id: string;
   title: string;
+  description?: string;
   price: number;
   is_free: boolean;
   listing_type: string;

@@ -1,3 +1,4 @@
+
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,11 +10,13 @@ interface ProductCardProps {
   viewMode: 'grid' | 'list';
   onContactSeller: (productId: string, sellerId: string, productTitle: string) => void;
   onAddToFavorites: (productId: string) => void;
+  onProductClick: (product: Product) => void;
 }
 
-const ProductCard = ({ product, viewMode, onContactSeller, onAddToFavorites }: ProductCardProps) => {
+const ProductCard = ({ product, viewMode, onContactSeller, onAddToFavorites, onProductClick }: ProductCardProps) => {
   return (
-    <Card className="group hover:shadow-2xl transition-all duration-300 border-0 rounded-2xl overflow-hidden bg-white">
+    <Card className="group hover:shadow-2xl transition-all duration-300 border-0 rounded-2xl overflow-hidden bg-white cursor-pointer"
+          onClick={() => onProductClick(product)}>
       <div className="relative overflow-hidden">
         <img
           src={product.images?.[0] || 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400&h=300&fit=crop'}
@@ -36,7 +39,10 @@ const ProductCard = ({ product, viewMode, onContactSeller, onAddToFavorites }: P
             size="sm"
             variant="outline"
             className="bg-white/90 hover:bg-white border-0 shadow-md h-9 w-9 p-0"
-            onClick={() => onAddToFavorites(product.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onAddToFavorites(product.id);
+            }}
           >
             <Heart className="w-4 h-4" />
           </Button>
@@ -70,7 +76,10 @@ const ProductCard = ({ product, viewMode, onContactSeller, onAddToFavorites }: P
 
         <Button 
           className="w-full bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-xl"
-          onClick={() => onContactSeller(product.id, product.user_id, product.title)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onContactSeller(product.id, product.user_id, product.title);
+          }}
         >
           <MessageCircle className="w-4 h-4 mr-2" />
           Contact Seller
