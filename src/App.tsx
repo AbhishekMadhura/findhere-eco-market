@@ -12,6 +12,7 @@ import MyProducts from "./pages/MyProducts";
 import Chat from "./pages/Chat";
 import Map from "./pages/Map";
 import Auth from "./pages/Auth";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/chat" element={<Chat />} />
             <Route path="/map" element={<Map />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/profile" element={<Profile />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

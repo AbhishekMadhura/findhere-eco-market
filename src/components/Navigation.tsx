@@ -5,6 +5,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Menu, Search, MessageCircle, MapPin, User, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
+import UserProfileDropdown from './UserProfileDropdown';
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -63,14 +64,9 @@ const Navigation = () => {
             ))}
           </div>
 
-          {/* CTA Button */}
+          {/* User Profile Dropdown */}
           <div className="hidden md:block">
-            <Button 
-              className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-              onClick={() => navigate('/auth')}
-            >
-              Get Started
-            </Button>
+            <UserProfileDropdown />
           </div>
 
           {/* Mobile Menu */}
@@ -112,12 +108,7 @@ const Navigation = () => {
                 ))}
                 
                 <div className="pt-4">
-                  <Button 
-                    className="w-full bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white shadow-lg"
-                    onClick={() => handleNavigation('/auth')}
-                  >
-                    Get Started
-                  </Button>
+                  <UserProfileDropdown />
                 </div>
               </div>
             </SheetContent>

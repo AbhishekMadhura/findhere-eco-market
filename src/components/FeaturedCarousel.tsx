@@ -89,6 +89,7 @@ const FeaturedCarousel = () => {
               }`}
               onMouseEnter={() => setHoveredCard(index)}
               onMouseLeave={() => setHoveredCard(null)}
+              onClick={() => handleProductClick(product.id)}
             >
               <div className="relative">
                 <img
@@ -112,6 +113,10 @@ const FeaturedCarousel = () => {
                     size="icon"
                     variant="ghost"
                     className="bg-white/80 backdrop-blur-sm hover:bg-white/90 h-8 w-8"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      console.log('Add to favorites');
+                    }}
                   >
                     <Heart className="h-4 w-4" />
                   </Button>
@@ -149,7 +154,10 @@ const FeaturedCarousel = () => {
 
                 <Button 
                   className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
-                  onClick={() => handleProductClick(product.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleProductClick(product.id);
+                  }}
                 >
                   {product.type === 'Rent' ? 'Rent Now' : 'Buy Now'}
                 </Button>
