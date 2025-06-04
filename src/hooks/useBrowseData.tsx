@@ -1,29 +1,6 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-
-interface Product {
-  id: string;
-  title: string;
-  price: number;
-  is_free: boolean;
-  listing_type: string;
-  location: string;
-  images: string[];
-  condition: string;
-  user_id: string;
-  category_id: string;
-  created_at: string;
-  profiles: {
-    first_name: string;
-    last_name: string;
-  } | null;
-}
-
-interface Category {
-  id: string;
-  name: string;
-}
+import { Product, Category } from '@/types/product';
 
 export const useBrowseData = () => {
   const [products, setProducts] = useState<Product[]>([]);

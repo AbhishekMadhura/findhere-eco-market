@@ -1,16 +1,5 @@
-
 import { useState, useEffect, useMemo } from 'react';
-
-interface Product {
-  id: string;
-  title: string;
-  price: number;
-  is_free: boolean;
-  listing_type: string;
-  location: string;
-  category_id: string;
-  created_at: string;
-}
+import { Product } from '@/types/product';
 
 export const useProductFilters = (products: Product[]) => {
   const [searchQuery, setSearchQuery] = useState('');

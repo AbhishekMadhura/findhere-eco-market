@@ -1,24 +1,8 @@
-
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Heart, MessageCircle, MapPin, Star } from 'lucide-react';
-
-interface Product {
-  id: string;
-  title: string;
-  price: number;
-  is_free: boolean;
-  listing_type: string;
-  location: string;
-  images: string[];
-  condition: string;
-  user_id: string;
-  profiles: {
-    first_name: string;
-    last_name: string;
-  } | null;
-}
+import { Product } from '@/types/product';
 
 interface ProductCardProps {
   product: Product;
