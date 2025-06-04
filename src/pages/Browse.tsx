@@ -25,7 +25,7 @@ interface Product {
   profiles: {
     first_name: string;
     last_name: string;
-  };
+  } | null;
 }
 
 const Browse = () => {
@@ -70,7 +70,7 @@ const Browse = () => {
         .from('products')
         .select(`
           *,
-          profiles:user_id (
+          profiles!products_user_id_fkey (
             first_name,
             last_name
           )

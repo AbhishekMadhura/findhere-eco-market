@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
@@ -31,11 +30,11 @@ interface Inquiry {
   created_at: string;
   products: {
     title: string;
-  };
+  } | null;
   profiles: {
     first_name: string;
     last_name: string;
-  };
+  } | null;
 }
 
 interface Favorite {
@@ -47,7 +46,7 @@ interface Favorite {
     is_free: boolean;
     images: string[];
     listing_type: string;
-  };
+  } | null;
 }
 
 const MyProducts = () => {
@@ -85,7 +84,7 @@ const MyProducts = () => {
           message,
           created_at,
           products (title),
-          profiles:buyer_id (first_name, last_name)
+          profiles!inquiries_buyer_id_fkey (first_name, last_name)
         `)
         .eq('seller_id', user?.id)
         .order('created_at', { ascending: false });
