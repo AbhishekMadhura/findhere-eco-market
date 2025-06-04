@@ -66,20 +66,32 @@ const Browse = () => {
 
   const fetchProducts = async () => {
     try {
-      const { data, error } = await supabase
+      // First fetch products
+      const { data: productsData, error: productsError } = await supabase
         .from('products')
-        .select(`
-          *,
-          profiles!products_user_id_fkey (
-            first_name,
-            last_name
-          )
-        `)
+        .select('*')
         .eq('status', 'active')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setProducts(data || []);
+      if (productsError) throw productsError;
+
+      // Then fetch profiles for each product
+      const productsWithProfiles = await Promise.all(
+        (productsData || []).map(async (product) => {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('first_name, last_name')
+            .eq('id', product.user_id)
+            .single();
+
+          return {
+            ...product,
+            profiles: profileData
+          };
+        })
+      );
+
+      setProducts(productsWithProfiles);
       setIsLoading(false);
     } catch (error) {
       console.error('Error fetching products:', error);

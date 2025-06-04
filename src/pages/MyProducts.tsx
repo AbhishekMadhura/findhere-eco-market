@@ -76,37 +76,68 @@ const MyProducts = () => {
 
       if (productsError) throw productsError;
 
-      // Fetch inquiries received
+      // Fetch inquiries received - separate queries to avoid foreign key issues
       const { data: inquiriesData, error: inquiriesError } = await supabase
         .from('inquiries')
-        .select(`
-          id,
-          message,
-          created_at,
-          products (title),
-          profiles!inquiries_buyer_id_fkey (first_name, last_name)
-        `)
+        .select('id, message, created_at, product_id, buyer_id')
         .eq('seller_id', user?.id)
         .order('created_at', { ascending: false });
 
       if (inquiriesError) throw inquiriesError;
 
+      // Fetch additional data for inquiries
+      const inquiriesWithDetails = await Promise.all(
+        (inquiriesData || []).map(async (inquiry) => {
+          // Fetch product details
+          const { data: productData } = await supabase
+            .from('products')
+            .select('title')
+            .eq('id', inquiry.product_id)
+            .single();
+
+          // Fetch buyer profile
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('first_name, last_name')
+            .eq('id', inquiry.buyer_id)
+            .single();
+
+          return {
+            ...inquiry,
+            products: productData,
+            profiles: profileData
+          };
+        })
+      );
+
       // Fetch user's favorites
       const { data: favoritesData, error: favoritesError } = await supabase
         .from('favorites')
-        .select(`
-          id,
-          created_at,
-          products (title, price, is_free, images, listing_type)
-        `)
+        .select('id, created_at, product_id')
         .eq('user_id', user?.id)
         .order('created_at', { ascending: false });
 
       if (favoritesError) throw favoritesError;
 
+      // Fetch product details for favorites
+      const favoritesWithDetails = await Promise.all(
+        (favoritesData || []).map(async (favorite) => {
+          const { data: productData } = await supabase
+            .from('products')
+            .select('title, price, is_free, images, listing_type')
+            .eq('id', favorite.product_id)
+            .single();
+
+          return {
+            ...favorite,
+            products: productData
+          };
+        })
+      );
+
       setProducts(productsData || []);
-      setInquiries(inquiriesData || []);
-      setFavorites(favoritesData || []);
+      setInquiries(inquiriesWithDetails || []);
+      setFavorites(favoritesWithDetails || []);
       setIsLoading(false);
     } catch (error) {
       console.error('Error fetching data:', error);
