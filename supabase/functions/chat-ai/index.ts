@@ -126,8 +126,8 @@ function getFallbackResponse(message: string): string {
 
 function cleanResponse(response: string, originalMessage: string): string {
   // Remove common artifacts from generated text
-  let cleaned = response.replace(/^\s*[\[\](){}]+\s*/, '') // Remove leading brackets
-  cleaned = cleaned.replace(/\s*[\[\](){}]+\s*$/, '') // Remove trailing brackets
+  let cleaned = response.replace(/^\s*[[\](){}]+\s*/, '') // Remove leading brackets
+  cleaned = cleaned.replace(/\s*[[\](){}]+\s*$/, '') // Remove trailing brackets
   cleaned = cleaned.replace(/^(user:|assistant:|human:|ai:)/i, '') // Remove role prefixes
   cleaned = cleaned.trim()
   

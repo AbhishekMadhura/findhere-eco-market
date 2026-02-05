@@ -26,6 +26,8 @@ interface Product {
   distance?: number;
 }
 
+type FilterType = 'all' | 'sell' | 'rent' | 'exchange';
+
 const Map = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
@@ -388,7 +390,7 @@ const Map = () => {
                       key={type}
                       variant={filterType === type ? 'default' : 'outline'}
                       size="sm"
-                      onClick={() => setFilterType(type as any)}
+                      onClick={() => setFilterType(type as FilterType)}
                       className="capitalize"
                     >
                       {type}
